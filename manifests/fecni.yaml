@@ -60,41 +60,7 @@ spec:
               mountPath: /host/opt/cni/bin
         - name: configure-cni
           image: fecni:v0.1.0-dev
-          command: ["/bin/sh", "-c"]
-          args:
-            - |
-              set -eu
-
-              TOKEN=$(cat /var/run/secrets/kubernetes.io/serviceaccount/token)
-
-              API_HOST="${KUBERNETES_SERVICE_HOST}"
-              case "${API_HOST}" in
-                *:*) API_HOST="[${API_HOST}]" ;;
-              esac
-              API_URL="https://${API_HOST}:${KUBERNETES_SERVICE_PORT}/api/v1/nodes/${NODE_NAME}"
-
-              echo "Fetching podCIDR for node ${NODE_NAME} from ${API_URL}"
-              PODCIDR=$(wget -q -O - \
-                --no-check-certificate \
-                --header="Authorization: Bearer ${TOKEN}" \
-                "${API_URL}" \
-                | sed -n 's/.*"podCIDR": *"\([^"]*\)".*/\1/p')
-
-              if [ -z "${PODCIDR}" ]; then
-                echo "ERROR: node ${NODE_NAME} has no spec.podCIDR set."
-                echo "Set it with:"
-                echo "  kubectl patch node ${NODE_NAME} --type=merge -p '{\"spec\":{\"podCIDR\":\"<your-ipv6-subnet>\"}}'"
-                exit 1
-              fi
-
-              echo "Node ${NODE_NAME} podCIDR: ${PODCIDR}"
-
-              sed "s|__PODCIDR_SUBNET__|${PODCIDR}|g" \
-                /template/fecni.conflist \
-                > /host/etc/cni/net.d/fecni.conflist
-
-              echo "CNI config written to /host/etc/cni/net.d/fecni.conflist:"
-              cat /host/etc/cni/net.d/fecni.conflist
+          command: ["/fecni-init"]
           env:
             - name: NODE_NAME
               valueFrom:

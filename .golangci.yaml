@@ -9,6 +9,16 @@ linters:
     - nilerr
     - wrapcheck
     - gosec
+  settings:
+    gosec:
+      # gosec rules G7XX and G304 deal with injection via user input, but the
+      # CNI is meant to run only with trusted input provided by the CRI. These
+      # rules ended up producing a lot of noise.
+      excludes:
+        - G703
+        - G704
+        - G706
+        - G304
 
 formatters:
   enable:
@@ -16,4 +26,5 @@ formatters:
     - goimports
   settings:
     goimports:
-      local-prefixes: github.com/ironcore-dev/feCNI
+      local-prefixes:
+        - github.com/ironcore-dev/feCNI
