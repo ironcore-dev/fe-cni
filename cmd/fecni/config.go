@@ -1,0 +1,70 @@
+//go:build linux
+
+package main
+
+import (
+	"encoding/json"
+	"fmt"
+	"net"
+
+	"github.com/containernetworking/cni/pkg/types"
+)
+
+const defaultMTU = 1500
+
+// NetConf is the feCNI plugin configuration parsed from the CNI network config.
+type NetConf struct {
+	types.NetConf
+	// MTU is the MTU for the veth interfaces. Defaults to 1500 when unset.
+	MTU int `json:"mtu"`
+	// Subnet is the node's podCIDR, an IPv6 network. Addresses are allocated
+	// from it in /127-aligned pairs by the built-in IPAM allocator.
+	Subnet string `json:"subnet"`
+	// DataDir is where the IPAM allocator persists reservations. Optional;
+	// when empty the store's default (/var/lib/cni/networks) is used.
+	DataDir string `json:"dataDir"`
+}
+
+// loadNetConf parses the CNI network configuration JSON bytes into a NetConf
+// and validates it.
+func loadNetConf(bytes []byte) (*NetConf, error) {
+	conf := &NetConf{}
+	if err := json.Unmarshal(bytes, conf); err != nil {
+		return nil, fmt.Errorf("failed to load netconf: %w", err)
+	}
+
+	if conf.MTU == 0 {
+		conf.MTU = defaultMTU
+	}
+
+	if conf.IPAM.Type != "" {
+		return nil, fmt.Errorf("feCNI has a built-in IPAM; remove the \"ipam\" stanza from the network config")
+	}
+
+	if _, err := conf.parseSubnet(); err != nil {
+		return nil, err
+	}
+
+	return conf, nil
+}
+
+// parseSubnet parses and validates the configured Subnet as an IPv6 network.
+// feCNI is IPv6-only, so an IPv4 subnet is rejected.
+func (c *NetConf) parseSubnet() (*net.IPNet, error) {
+	if c.Subnet == "" {
+		return nil, fmt.Errorf("subnet is required")
+	}
+
+	ip, ipNet, err := net.ParseCIDR(c.Subnet)
+	if err != nil {
+		return nil, fmt.Errorf("invalid subnet %q: %w", c.Subnet, err)
+	}
+	if ip.To4() != nil {
+		return nil, fmt.Errorf("feCNI is IPv6-only but subnet %q is IPv4", c.Subnet)
+	}
+	if !ip.Equal(ipNet.IP) {
+		return nil, fmt.Errorf("subnet %q has host bits set; did you mean %s?", c.Subnet, ipNet)
+	}
+
+	return ipNet, nil
+}
