@@ -9,6 +9,7 @@ require (
 )
 
 require (
+	github.com/alexflint/go-filemutex v1.3.0 // indirect
 	github.com/coreos/go-iptables v0.8.0 // indirect
 	github.com/pkg/errors v0.9.1 // indirect
 	github.com/safchain/ethtool v0.6.2 // indirect
