@@ -108,6 +108,89 @@ func teardownOnErr(ifName string, cause error) error {
 	return cause
 }
 
+// CheckLink verifies, from within the current network namespace, that ifName
+// exists as a veth, is administratively up, and carries expectedIP as a /128
+// address. When expectDefaultRoute is true it also requires an IPv6 default
+// route (::/0) via peerIP. It returns a descriptive error on the first
+// discrepancy and nil when everything matches.
+//
+// The verifier only asserts the presence of the expected address/route and
+// tolerates additional ones, so a later chained plugin that adds resources does
+// not cause a spurious failure. It performs read-only netlink queries and never
+// mutates state, so it is safe to call repeatedly (e.g. from CNI CHECK).
+//
+// Note the peer-address form used by configurePodVeth/configureHostVeth: the
+// local address is added without a mask (a /128), so the expected on-link
+// address is expectedIP/128. The Addr.Peer field is intentionally not compared
+// as netlink does not round-trip it reliably.
+func CheckLink(ifName string, expectedIP, peerIP net.IP, expectDefaultRoute bool) error {
+	link, err := netlinksafe.LinkByName(ifName)
+	if err != nil {
+		return fmt.Errorf("interface %q not found: %w", ifName, err)
+	}
+
+	if _, ok := link.(*netlink.Veth); !ok {
+		return fmt.Errorf("interface %q is not a veth (type %q)", ifName, link.Type())
+	}
+
+	if link.Attrs().Flags&net.FlagUp == 0 {
+		return fmt.Errorf("interface %q is not up", ifName)
+	}
+
+	addrs, err := netlinksafe.AddrList(link, netlink.FAMILY_V6)
+	if err != nil {
+		return fmt.Errorf("failed to list addresses on %q: %w", ifName, err)
+	}
+	if !hasAddr(addrs, expectedIP) {
+		return fmt.Errorf("interface %q is missing expected address %s/128", ifName, expectedIP)
+	}
+
+	if !expectDefaultRoute {
+		return nil
+	}
+
+	routes, err := netlinksafe.RouteList(link, netlink.FAMILY_V6)
+	if err != nil {
+		return fmt.Errorf("failed to list routes on %q: %w", ifName, err)
+	}
+	if !hasDefaultRoute(routes, peerIP) {
+		return fmt.Errorf("interface %q is missing default route via %s", ifName, peerIP)
+	}
+
+	return nil
+}
+
+// hasAddr reports whether addrs contains want as a /128 host address.
+func hasAddr(addrs []netlink.Addr, want net.IP) bool {
+	for _, addr := range addrs {
+		if addr.IPNet == nil || !addr.IP.Equal(want) {
+			continue
+		}
+		ones, bits := addr.Mask.Size()
+		if ones == ipv6Bits && bits == ipv6Bits {
+			return true
+		}
+	}
+	return false
+}
+
+// hasDefaultRoute reports whether routes contains an IPv6 default route
+// (Dst nil or ::/0) whose gateway is gw.
+func hasDefaultRoute(routes []netlink.Route, gw net.IP) bool {
+	for _, route := range routes {
+		if !route.Gw.Equal(gw) {
+			continue
+		}
+		if route.Dst == nil {
+			return true
+		}
+		if ones, _ := route.Dst.Mask.Size(); ones == 0 && route.Dst.IP.Equal(net.IPv6zero) {
+			return true
+		}
+	}
+	return false
+}
+
 // configurePodVeth configures the pod-side veth with the pod
 // address (/127, peer = host address), brings it up, and installs a default
 // route via the host peer.

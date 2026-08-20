@@ -259,3 +259,79 @@ func TestAllocator_StaleCursorAfterSubnetChange(t *testing.T) {
 		t.Errorf("allocated pod %s is outside new subnet %s", alloc.PodIP, &newCfg.Subnet)
 	}
 }
+
+func TestAllocator_LookupMissing(t *testing.T) {
+	a, err := New(testConfig(t, "2001:db8:1::/120"))
+	if err != nil {
+		t.Fatalf("New: %v", err)
+	}
+	defer func() { _ = a.Close() }()
+
+	alloc, err := a.Lookup("never-allocated", "eth0")
+	if err != nil {
+		t.Fatalf("Lookup: %v", err)
+	}
+	if alloc != nil {
+		t.Errorf("expected nil allocation for unallocated key, got %+v", alloc)
+	}
+}
+
+func TestAllocator_LookupDoesNotReserve(t *testing.T) {
+	cfg := testConfig(t, "2001:db8:1::/120")
+	a, err := New(cfg)
+	if err != nil {
+		t.Fatalf("New: %v", err)
+	}
+	defer func() { _ = a.Close() }()
+
+	// Reserve one key so the store is non-empty but the subnet still has room.
+	if _, err := a.Get("container-1", "eth0"); err != nil {
+		t.Fatalf("Get: %v", err)
+	}
+
+	dir := filepath.Join(cfg.DataDir, cfg.Network)
+	before, err := os.ReadDir(dir)
+	if err != nil {
+		t.Fatalf("ReadDir before: %v", err)
+	}
+
+	// Look up a different, unreserved key; it must miss and must not reserve.
+	looked, err := a.Lookup("container-2", "eth0")
+	if err != nil {
+		t.Fatalf("Lookup: %v", err)
+	}
+	if looked != nil {
+		t.Errorf("expected nil allocation for unreserved key, got %+v", looked)
+	}
+
+	after, err := os.ReadDir(dir)
+	if err != nil {
+		t.Fatalf("ReadDir after: %v", err)
+	}
+	if len(after) != len(before) {
+		t.Errorf("Lookup reserved a block: store file count before %d, after %d", len(before), len(after))
+	}
+}
+
+func TestAllocator_LookupAfterReleaseIsNil(t *testing.T) {
+	a, err := New(testConfig(t, "2001:db8:1::/120"))
+	if err != nil {
+		t.Fatalf("New: %v", err)
+	}
+	defer func() { _ = a.Close() }()
+
+	if _, err := a.Get("container-1", "eth0"); err != nil {
+		t.Fatalf("Get: %v", err)
+	}
+	if err := a.Release("container-1", "eth0"); err != nil {
+		t.Fatalf("Release: %v", err)
+	}
+
+	alloc, err := a.Lookup("container-1", "eth0")
+	if err != nil {
+		t.Fatalf("Lookup: %v", err)
+	}
+	if alloc != nil {
+		t.Errorf("expected nil allocation after release, got %+v", alloc)
+	}
+}

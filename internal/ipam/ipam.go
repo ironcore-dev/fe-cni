@@ -123,6 +123,27 @@ func (a *Allocator) Get(id, ifname string) (*Allocation, error) {
 	return nil, fmt.Errorf("no free /127 blocks in %s", a.subnet.String())
 }
 
+// Lookup returns the existing allocation for (id, ifname) without reserving
+// anything. It returns (nil, nil) when no in-subnet reservation exists, which
+// lets callers such as CNI CHECK distinguish "missing" from a store error.
+//
+// It mirrors the idempotency path in Get: only reservations whose recorded
+// (pod) address falls within the configured subnet are considered.
+func (a *Allocator) Lookup(id, ifname string) (*Allocation, error) {
+	if err := a.store.Lock(); err != nil {
+		return nil, fmt.Errorf("failed to lock IPAM store: %w", err)
+	}
+	defer func() { _ = a.store.Unlock() }()
+
+	for _, ip := range a.store.GetByID(id, ifname) {
+		if a.subnet.Contains(ip) {
+			return makeAllocation(ip), nil
+		}
+	}
+
+	return nil, nil
+}
+
 // Release frees the block reserved for (id, ifname). It is idempotent, no
 // error is returned if nothing is reserved for the key.
 func (a *Allocator) Release(id, ifname string) error {

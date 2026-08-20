@@ -32,7 +32,3 @@ func main() {
 		bv.BuildString("fecni"),
 	)
 }
-
-func cmdCheck(args *skel.CmdArgs) error {
-	return nil
-}
