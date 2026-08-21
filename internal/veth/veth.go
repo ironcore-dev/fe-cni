@@ -200,27 +200,8 @@ func configurePodVeth(ifName string, podIP, hostIP net.IP) error {
 		return fmt.Errorf("failed to look up %q: %w", ifName, err)
 	}
 
-	if err := setIPv6Sysctl(ifName, vethOptions); err != nil {
+	if err := configureVeth(link, podIP, hostIP); err != nil {
 		return err
-	}
-
-	// Note that per ip-address[0] documentation, if peer address is set,
-	// it should be the peer that defines prefix length.
-	//
-	// [0] https://man7.org/linux/man-pages/man8/ip-address.8.html
-	addr := &netlink.Addr{
-		IPNet: &net.IPNet{IP: podIP},
-		Peer: &net.IPNet{
-			IP:   hostIP,
-			Mask: net.CIDRMask(ipv6PointToPointPrefix, ipv6Bits),
-		},
-	}
-	if err := netlink.AddrAdd(link, addr); err != nil {
-		return fmt.Errorf("failed to add address %s to %q: %w", podIP, ifName, err)
-	}
-
-	if err := netlink.LinkSetUp(link); err != nil {
-		return fmt.Errorf("failed to set %q up: %w", ifName, err)
 	}
 
 	if err := ip.AddDefaultRoute(hostIP, link); err != nil {
@@ -238,7 +219,18 @@ func configureHostVeth(vethName string, hostIP, podIP net.IP) error {
 	if err != nil {
 		return fmt.Errorf("failed to look up %q: %w", vethName, err)
 	}
+	return configureVeth(link, hostIP, podIP)
+}
 
+// configureVeth configures the link by:
+//   - setting [vethOptions] on it
+//   - setting localIP as local address and peerIP as point-to-point peer address
+//   - setting the link up
+//
+// Note: this function exists to aggregate the common code of the [configureHostVeth]
+// and [configurePodVeth] functions. You likely want to use one of those functions.
+func configureVeth(link netlink.Link, localIP, peerIP net.IP) error {
+	vethName := link.Attrs().Name
 	if err := setIPv6Sysctl(vethName, vethOptions); err != nil {
 		return err
 	}
@@ -248,14 +240,14 @@ func configureHostVeth(vethName string, hostIP, podIP net.IP) error {
 	//
 	// [0] https://man7.org/linux/man-pages/man8/ip-address.8.html
 	addr := &netlink.Addr{
-		IPNet: &net.IPNet{IP: hostIP},
+		IPNet: &net.IPNet{IP: localIP},
 		Peer: &net.IPNet{
-			IP:   podIP,
+			IP:   peerIP,
 			Mask: net.CIDRMask(ipv6PointToPointPrefix, ipv6Bits),
 		},
 	}
 	if err := netlink.AddrAdd(link, addr); err != nil {
-		return fmt.Errorf("failed to add address %s to %q: %w", hostIP, vethName, err)
+		return fmt.Errorf("failed to add address %s to %q: %w", localIP, vethName, err)
 	}
 
 	if err := netlink.LinkSetUp(link); err != nil {
