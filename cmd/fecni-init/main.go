@@ -30,12 +30,6 @@ const (
 	saCAPath    = "/var/run/secrets/kubernetes.io/serviceaccount/ca.crt"
 )
 
-var (
-	Version   = "dev"
-	BuildTime = "unknown"
-	GitCommit = "unknown"
-)
-
 // node is the minimal slice of the k8s Node API needed by FeCNI init.
 type node struct {
 	Spec struct {
@@ -53,8 +47,8 @@ func main() {
 		log.Fatalf("node-name is required (set NODE_NAME env var or pass -node-name flag)")
 	}
 
-	log.Printf("FeCNI init %s (commit %s, built %s)", Version, GitCommit, BuildTime)
-	log.Printf("node: %q", *nodeName)
+	log.Println("FeCNI init")
+	log.Printf("Node: %q\n", *nodeName)
 
 	podCIDR, err := fetchPodCIDR(*nodeName)
 	if err != nil {

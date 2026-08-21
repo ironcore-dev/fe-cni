@@ -19,10 +19,8 @@ list:
 # Build the feCNI binaries
 build:
     CGO_ENABLED=0 GOOS={{GOOS}} GOARCH={{GOARCH}} go build \
-        -ldflags "-s -w -X main.Version={{VERSION}} -X main.BuildTime={{BUILD_TIME}} -X main.GitCommit={{GIT_COMMIT}}" \
         -o {{ BUILD_DIR }}/{{ BIN_NAME }} {{ CMD_DIR }}
     CGO_ENABLED=0 GOOS={{GOOS}} GOARCH={{GOARCH}} go build \
-        -ldflags "-s -w -X main.Version={{VERSION}} -X main.BuildTime={{BUILD_TIME}} -X main.GitCommit={{GIT_COMMIT}}" \
         -o {{ BUILD_DIR }}/{{ INIT_BIN_NAME }} {{ INIT_CMD_DIR }}
 
 # Run tests

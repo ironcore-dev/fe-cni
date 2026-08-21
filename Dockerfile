@@ -7,22 +7,17 @@ RUN go mod download
 
 COPY . .
 
-ARG VERSION=dev
-ARG BUILD_TIME
-ARG GIT_COMMIT=unknown
 ARG TARGETOS=linux
 ARG TARGETARCH
 
 RUN CGO_ENABLED=0 GOOS=${TARGETOS} GOARCH=${TARGETARCH} go build \
-	-ldflags "-s -w -X 'main.Version=${VERSION}' -X 'main.BuildTime=${BUILD_TIME}' -X 'main.GitCommit=${GIT_COMMIT}'" \
 	-o /build/bin/fecni \
 	./cmd/fecni && \
 	CGO_ENABLED=0 GOOS=${TARGETOS} GOARCH=${TARGETARCH} go build \
-	-ldflags "-s -w -X 'main.Version=${VERSION}' -X 'main.BuildTime=${BUILD_TIME}' -X 'main.GitCommit=${GIT_COMMIT}'" \
 	-o /build/bin/fecni-init \
 	./cmd/fecni-init
 
-FROM --platform=$TARGETPLATFORM alpine:3.22
+FROM alpine:3.22
 
 COPY --from=builder /build/bin/fecni /fecni
 COPY --from=builder /build/bin/fecni-init /fecni-init
