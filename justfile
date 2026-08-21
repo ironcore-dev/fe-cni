@@ -4,7 +4,7 @@ CMD_DIR := "./cmd/fecni"
 INIT_BIN_NAME := "fecni-init"
 INIT_CMD_DIR := "./cmd/fecni-init"
 
-# feCNI is a Linux CNI plugin — always target Linux.
+# FeCNI is a Linux CNI plugin — always target Linux.
 GOOS := "linux"
 GOARCH := env("GOARCH", "amd64")
 
@@ -16,7 +16,7 @@ GIT_COMMIT := `git rev-parse --short HEAD 2>/dev/null || echo "unknown"`
 list:
     just --list
 
-# Build the feCNI binaries
+# Build the FeCNI binaries
 build:
     CGO_ENABLED=0 GOOS={{GOOS}} GOARCH={{GOARCH}} go build \
         -o {{ BUILD_DIR }}/{{ BIN_NAME }} {{ CMD_DIR }}

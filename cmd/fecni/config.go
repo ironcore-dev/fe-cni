@@ -12,7 +12,7 @@ import (
 
 const defaultMTU = 1500
 
-// NetConf is the feCNI plugin configuration parsed from the CNI network config.
+// NetConf is the FeCNI plugin configuration parsed from the CNI network config.
 type NetConf struct {
 	types.NetConf
 	// MTU is the MTU for the veth interfaces. Defaults to 1500 when unset.
@@ -38,7 +38,7 @@ func loadNetConf(bytes []byte) (*NetConf, error) {
 	}
 
 	if conf.IPAM.Type != "" {
-		return nil, fmt.Errorf("feCNI has a built-in IPAM; remove the \"ipam\" stanza from the network config")
+		return nil, fmt.Errorf("FeCNI has a built-in IPAM; remove the \"ipam\" stanza from the network config")
 	}
 
 	if _, err := conf.parseSubnet(); err != nil {
@@ -49,7 +49,7 @@ func loadNetConf(bytes []byte) (*NetConf, error) {
 }
 
 // parseSubnet parses and validates the configured Subnet as an IPv6 network.
-// feCNI is IPv6-only, so an IPv4 subnet is rejected.
+// FeCNI is IPv6-only, so an IPv4 subnet is rejected.
 func (c *NetConf) parseSubnet() (*net.IPNet, error) {
 	if c.Subnet == "" {
 		return nil, fmt.Errorf("subnet is required")
@@ -60,7 +60,7 @@ func (c *NetConf) parseSubnet() (*net.IPNet, error) {
 		return nil, fmt.Errorf("invalid subnet %q: %w", c.Subnet, err)
 	}
 	if ip.To4() != nil {
-		return nil, fmt.Errorf("feCNI is IPv6-only but subnet %q is IPv4", c.Subnet)
+		return nil, fmt.Errorf("FeCNI is IPv6-only but subnet %q is IPv4", c.Subnet)
 	}
 	if !ip.Equal(ipNet.IP) {
 		return nil, fmt.Errorf("subnet %q has host bits set; did you mean %s?", c.Subnet, ipNet)

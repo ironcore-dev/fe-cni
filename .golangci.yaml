@@ -27,4 +27,4 @@ formatters:
   settings:
     goimports:
       local-prefixes:
-        - github.com/ironcore-dev/feCNI
+        - github.com/ironcore-dev/FeCNI

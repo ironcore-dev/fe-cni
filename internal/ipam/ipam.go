@@ -1,7 +1,7 @@
 //go:build linux
 
 // Package ipam implements a built-in /127-aligned IPv6 address allocator for
-// feCNI. Each pod veth pair occupies one /127 block: the host takes the lower
+// FeCNI. Each pod veth pair occupies one /127 block: the host takes the lower
 // (even) address (see [RFC 4291], Required Anycast Address) and the pod
 // takes the upper (odd) address.
 //

@@ -12,8 +12,8 @@ import (
 	"github.com/containernetworking/plugins/pkg/ip"
 	"github.com/containernetworking/plugins/pkg/ns"
 
-	"github.com/ironcore-dev/feCNI/internal/ipam"
-	"github.com/ironcore-dev/feCNI/internal/veth"
+	"github.com/ironcore-dev/FeCNI/internal/ipam"
+	"github.com/ironcore-dev/FeCNI/internal/veth"
 )
 
 // cmdAdd implements the CNI ADD command. It allocates a /127-aligned IPv6

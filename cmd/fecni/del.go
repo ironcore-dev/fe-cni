@@ -10,7 +10,7 @@ import (
 	"github.com/containernetworking/plugins/pkg/ip"
 	"github.com/containernetworking/plugins/pkg/ns"
 
-	"github.com/ironcore-dev/feCNI/internal/ipam"
+	"github.com/ironcore-dev/FeCNI/internal/ipam"
 )
 
 // cmdDel implements the CNI DEL command. It releases the IPAM allocation

@@ -10,7 +10,7 @@ import (
 	"github.com/containernetworking/cni/pkg/types"
 	current "github.com/containernetworking/cni/pkg/types/100"
 
-	"github.com/ironcore-dev/feCNI/internal/ipam"
+	"github.com/ironcore-dev/FeCNI/internal/ipam"
 )
 
 const (

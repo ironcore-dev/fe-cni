@@ -11,12 +11,12 @@ import (
 	"github.com/containernetworking/cni/pkg/version"
 	"github.com/containernetworking/plugins/pkg/ns"
 
-	"github.com/ironcore-dev/feCNI/internal/ipam"
-	"github.com/ironcore-dev/feCNI/internal/veth"
+	"github.com/ironcore-dev/FeCNI/internal/ipam"
+	"github.com/ironcore-dev/FeCNI/internal/veth"
 )
 
 // cmdCheck implements the CNI CHECK command. It verifies that the resources
-// feCNI created for the container are present and in the expected state. It ensures
+// FeCNI created for the container are present and in the expected state. It ensures
 // that the interface:
 //   - is UP
 //   - has expected address
@@ -129,7 +129,7 @@ func validatePrevResult(result *current.Result, alloc *ipam.Allocation, ifName, 
 // hostVethName returns the name of the host-side interface recorded in the
 // prevResult — the one that is neither the container interface nor in a
 // sandbox. It returns an error when the container interface or its host-side
-// peer cannot be found (both are expected, since the prevResult is feCNI's own
+// peer cannot be found (both are expected, since the prevResult is FeCNI's own
 // ADD output).
 func hostVethName(result *current.Result, ifName, netns string) (string, error) {
 	containerIdx, ok := containerInterfaceIndex(result, ifName, netns)

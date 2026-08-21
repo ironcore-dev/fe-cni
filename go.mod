@@ -1,4 +1,4 @@
-module github.com/ironcore-dev/feCNI
+module github.com/ironcore-dev/FeCNI
 
 go 1.26.0
 
