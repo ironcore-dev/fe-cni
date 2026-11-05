@@ -20,6 +20,9 @@ type NetConf struct {
 	// Subnet is the node's podCIDR, an IPv6 network. Addresses are allocated
 	// from it in /127-aligned pairs by the built-in IPAM allocator.
 	Subnet string `json:"subnet"`
+	// ParsedSubnet is the parsed and validated form of Subnet, populated by
+	// loadNetConf. Guaranteed non-nil for configs returned without error.
+	ParsedSubnet *net.IPNet `json:"-"`
 	// DataDir is where the IPAM allocator persists reservations. Optional;
 	// when empty the store's default (/var/lib/cni/networks) is used.
 	DataDir string `json:"dataDir"`
@@ -41,29 +44,31 @@ func loadNetConf(bytes []byte) (*NetConf, error) {
 		return nil, fmt.Errorf("FeCNI has a built-in IPAM; remove the \"ipam\" stanza from the network config")
 	}
 
-	if _, err := conf.parseSubnet(); err != nil {
+	subnet, err := parseSubnet(conf.Subnet)
+	if err != nil {
 		return nil, err
 	}
+	conf.ParsedSubnet = subnet
 
 	return conf, nil
 }
 
-// parseSubnet parses and validates the configured Subnet as an IPv6 network.
-// FeCNI is IPv6-only, so an IPv4 subnet is rejected.
-func (c *NetConf) parseSubnet() (*net.IPNet, error) {
-	if c.Subnet == "" {
+// parseSubnet parses and validates subnet as an IPv6 network. FeCNI is
+// IPv6-only, so an IPv4 subnet is rejected.
+func parseSubnet(subnet string) (*net.IPNet, error) {
+	if subnet == "" {
 		return nil, fmt.Errorf("subnet is required")
 	}
 
-	ip, ipNet, err := net.ParseCIDR(c.Subnet)
+	ip, ipNet, err := net.ParseCIDR(subnet)
 	if err != nil {
-		return nil, fmt.Errorf("invalid subnet %q: %w", c.Subnet, err)
+		return nil, fmt.Errorf("invalid subnet %q: %w", subnet, err)
 	}
 	if ip.To4() != nil {
-		return nil, fmt.Errorf("FeCNI is IPv6-only but subnet %q is IPv4", c.Subnet)
+		return nil, fmt.Errorf("FeCNI is IPv6-only but subnet %q is IPv4", subnet)
 	}
 	if !ip.Equal(ipNet.IP) {
-		return nil, fmt.Errorf("subnet %q has host bits set; did you mean %s?", c.Subnet, ipNet)
+		return nil, fmt.Errorf("subnet %q has host bits set; did you mean %s?", subnet, ipNet)
 	}
 
 	return ipNet, nil

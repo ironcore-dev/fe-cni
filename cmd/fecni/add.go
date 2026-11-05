@@ -27,13 +27,8 @@ func cmdAdd(args *skel.CmdArgs) (err error) {
 		return err
 	}
 
-	subnet, err := conf.parseSubnet()
-	if err != nil {
-		return err
-	}
-
 	allocator, err := ipam.New(ipam.Config{
-		Subnet:  *subnet,
+		Subnet:  *conf.ParsedSubnet,
 		DataDir: conf.DataDir,
 		Network: conf.Name,
 	})

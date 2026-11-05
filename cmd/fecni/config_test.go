@@ -108,6 +108,21 @@ func TestLoadNetConf_Errors(t *testing.T) {
 	}
 }
 
+// TestLoadNetConf_SubnetParsed verifies that a valid subnet is parsed and
+// exposed on the returned NetConf.
+func TestLoadNetConf_SubnetParsed(t *testing.T) {
+	conf, err := loadNetConf(makeConf(t, map[string]any{"subnet": "2001:db8::/120"}))
+	if err != nil {
+		t.Fatalf("loadNetConf: unexpected error: %v", err)
+	}
+	if conf.ParsedSubnet == nil {
+		t.Fatal("loadNetConf: ParsedSubnet is nil")
+	}
+	if got := conf.ParsedSubnet.String(); got != "2001:db8::/120" {
+		t.Errorf("ParsedSubnet: got %q, want %q", got, "2001:db8::/120")
+	}
+}
+
 func TestParseSubnet(t *testing.T) {
 	tests := []struct {
 		name    string
@@ -149,8 +164,7 @@ func TestParseSubnet(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			c := &NetConf{Subnet: tt.subnet}
-			ipNet, err := c.parseSubnet()
+			ipNet, err := parseSubnet(tt.subnet)
 			if tt.wantErr != "" {
 				if err == nil {
 					t.Fatal("expected error, got nil")
@@ -165,6 +179,9 @@ func TestParseSubnet(t *testing.T) {
 			}
 			if ipNet == nil {
 				t.Fatal("expected non-nil IPNet")
+			}
+			if tt.subnet != ipNet.String() {
+				t.Errorf("parsed subnet: got %q, want %q", ipNet, tt.subnet)
 			}
 		})
 	}
