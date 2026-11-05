@@ -20,7 +20,7 @@ func main() {
 			Add:    cmdAdd,
 			Del:    cmdDel,
 			Check:  cmdCheck,
-			Status: func(_ *skel.CmdArgs) error { return nil }, // Without any dependencies, we should be always good to go
+			Status: cmdStatus,
 		},
 		version.All,
 		bv.BuildString("fecni"),
