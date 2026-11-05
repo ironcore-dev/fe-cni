@@ -9,6 +9,12 @@ linters:
     - nilerr
     - wrapcheck
     - gosec
+  exclusions:
+    rules:
+      # gosec plugin produces false positives for tests without providing much of a value
+      - path: _test\.go
+        linters:
+          - gosec
   settings:
     gosec:
       # gosec rules G7XX and G304 deal with injection via user input, but the
