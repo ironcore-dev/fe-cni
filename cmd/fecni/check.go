@@ -27,17 +27,12 @@ func cmdCheck(args *skel.CmdArgs) error {
 		return err
 	}
 
-	subnet, err := conf.parseSubnet()
-	if err != nil {
-		return err
-	}
-
 	if args.Netns == "" {
 		return fmt.Errorf("CNI_NETNS is empty; cannot verify container interface %q", args.IfName)
 	}
 
 	allocator, err := ipam.New(ipam.Config{
-		Subnet:  *subnet,
+		Subnet:  *conf.ParsedSubnet,
 		DataDir: conf.DataDir,
 		Network: conf.Name,
 	})
