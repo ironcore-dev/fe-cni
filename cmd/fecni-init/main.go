@@ -15,6 +15,7 @@ import (
 	"net/netip"
 	"net/url"
 	"os"
+	"path/filepath"
 	"strings"
 	"time"
 
@@ -180,8 +181,28 @@ func renderTemplate(templatePath, outputPath, podCIDR string) error {
 
 	rendered := bytes.ReplaceAll(tmpl, []byte(podCIDRPlaceholder), []byte(podCIDR))
 
-	if err := os.WriteFile(outputPath, rendered, 0o600); err != nil {
-		return fmt.Errorf("failed to render CNI config file %s: %w", outputPath, err)
+	// Using temp file and "rename" ensures atomic change to the existing file
+	dir := filepath.Dir(outputPath)
+	tmp, err := os.CreateTemp(dir, ".fecni.conflist.*")
+	if err != nil {
+		return fmt.Errorf("failed to create temp conflist in %s: %w", dir, err)
+	}
+	tmpName := tmp.Name()
+	defer func() { _ = os.Remove(tmpName) }()
+	defer func() { _ = tmp.Close() }()
+
+	if _, err := tmp.Write(rendered); err != nil {
+		return fmt.Errorf("failed to write temp conflist %s: %w", tmpName, err)
+	}
+	if err := tmp.Chmod(0o600); err != nil {
+		return fmt.Errorf("failed to chmod temp conflist %s: %w", tmpName, err)
+	}
+	if err := tmp.Close(); err != nil {
+		return fmt.Errorf("failed to close temp conflist %s: %w", tmpName, err)
+	}
+
+	if err := os.Rename(tmpName, outputPath); err != nil {
+		return fmt.Errorf("failed to rename conflist into place %s: %w", outputPath, err)
 	}
 
 	return nil
