@@ -12,6 +12,7 @@ import (
 	"io"
 	"log"
 	"net/http"
+	"net/netip"
 	"net/url"
 	"os"
 	"strings"
@@ -29,6 +30,10 @@ const (
 	saTokenPath = "/var/run/secrets/kubernetes.io/serviceaccount/token"
 	saCAPath    = "/var/run/secrets/kubernetes.io/serviceaccount/ca.crt"
 )
+
+// podCIDRPollInterval sets the interval for podCIDR lookups while we wait
+// for it to be configured.
+const podCIDRPollInterval = 5 * time.Second
 
 // node is the minimal slice of the k8s Node API needed by FeCNI init.
 type node struct {
@@ -50,27 +55,45 @@ func main() {
 	log.Println("FeCNI init")
 	log.Printf("Node: %q\n", *nodeName)
 
-	podCIDR, err := fetchPodCIDR(*nodeName)
-	if err != nil {
-		log.Fatalf("failed to fetch podCIDR for node %q: %v", *nodeName, err)
-	}
-	if podCIDR == "" {
-		log.Fatalf("node %q has no spec.podCIDR set. Set it with:\n  kubectl patch node %s --type=merge -p '{\"spec\":{\"podCIDR\":[\"<your-ipv6-subnet>\"]}}'", *nodeName, *nodeName)
-	}
-
-	log.Printf("node %q podCIDR: %s", *nodeName, podCIDR)
-
-	if err := renderTemplate(*templatePath, *outputPath, podCIDR); err != nil {
-		log.Fatalf("failed to render conflist: %v", err)
-	}
-
-	log.Printf("CNI config written to %s", *outputPath)
-
 	if err := ip.EnableIP6Forward(); err != nil {
 		log.Fatalf("failed to enable IPv6 forwarding: %v", err)
 	}
-
 	log.Println("IPv6 forwarding enabled")
+
+	// Block until a podCIDR is assigned to the node, and only then render the
+	// conflist. This ensures we never write a config with an empty subnet.
+	podCIDR := waitForPodCIDR(*nodeName, fetchPodCIDR, podCIDRPollInterval)
+	if err := renderTemplate(*templatePath, *outputPath, podCIDR); err != nil {
+		log.Fatalf("failed to render conflist: %v", err)
+	}
+	log.Printf("CNI config written with subnet %s at %s", podCIDR, *outputPath)
+}
+
+// waitForPodCIDR takes a node's name and a function that returns node's podCIDR. It
+// polls the provided function at the given interval and returns only once the node
+// has a valid IPv6 prefix assigned.
+//
+// Note: This function COULD block forever, if the node is never assigned a valid IPv6
+// podCIDR.
+func waitForPodCIDR(nodeName string, fetch func(string) (string, error), interval time.Duration) string {
+	for {
+		podCIDR, err := fetch(nodeName)
+		if err != nil {
+			log.Printf("failed to fetch podCIDR for node %q: %v; retrying in %s", nodeName, err, interval)
+			time.Sleep(interval)
+			continue
+		}
+
+		prefix, parseErr := netip.ParsePrefix(podCIDR)
+		if parseErr != nil {
+			log.Printf("node %q has unusable spec.podCIDR %q: %v; waiting %s", nodeName, podCIDR, parseErr, interval)
+		} else if prefix.Addr().Is4() || prefix.Addr().Is4In6() {
+			log.Printf("node %q podCIDR %q is not an IPv6 prefix; waiting %s", nodeName, podCIDR, interval)
+		} else {
+			return prefix.Masked().String()
+		}
+		time.Sleep(interval)
+	}
 }
 
 // fetchPodCIDR queries the in-cluster kubernetes API for the node's podCIDR.
