@@ -1,0 +1,76 @@
+# yaml-language-server: $schema=https://taskfile.dev/schema.json
+version: '3'
+
+vars:
+  # FeCNI is a Linux CNI plugin — always target Linux.
+  GOOS: linux
+  GOARCH:
+    sh: go env GOARCH
+  BUILD_DIR: build
+  VERSION:
+    sh: cat VERSION 2>/dev/null || echo dev
+
+env:
+  CGO_ENABLED: '0'
+  GOOS: '{{.GOOS}}'
+
+tasks:
+  default:
+    silent: true
+    cmds: [task --list]
+
+  build:
+    desc: Build the FeCNI binaries (pass GOARCH variable for cross-architecture build)
+    env:
+      GOARCH: '{{.GOARCH}}'
+    method: timestamp
+    sources:
+      - cmd/**/*.go
+      - internal/**/*.go
+      - go.mod
+      - go.sum
+    generates:
+      - '{{.BUILD_DIR}}/fecni-{{.GOOS}}-{{.GOARCH}}'
+      - '{{.BUILD_DIR}}/fecni-init-{{.GOOS}}-{{.GOARCH}}'
+    cmds:
+      - mkdir -p {{.BUILD_DIR}}
+      - go build -o {{.BUILD_DIR}}/fecni-{{.GOOS}}-{{.GOARCH}} ./cmd/fecni
+      - go build -o {{.BUILD_DIR}}/fecni-init-{{.GOOS}}-{{.GOARCH}} ./cmd/fecni-init
+
+  image:
+    desc: Build FeCNI container image (pass GOARCH variable for cross-architecture image build)
+    method: timestamp
+    sources:
+      - cmd/**/*.go
+      - internal/**/*.go
+      - go.mod
+      - go.sum
+      - Dockerfile
+      - VERSION
+    generates:
+      - '{{.BUILD_DIR}}/fecni_{{.GOOS}}_{{.GOARCH}}_{{.VERSION}}.tar'
+    cmds:
+      - mkdir -p {{.BUILD_DIR}}
+      - docker buildx build --platform {{.GOOS}}/{{.GOARCH}} -t fecni:{{.VERSION}} --load .
+      - docker save fecni:{{.VERSION}} -o {{.BUILD_DIR}}/fecni_{{.GOOS}}_{{.GOARCH}}_{{.VERSION}}.tar
+
+  test:
+    desc: Run unit tests
+    cmds:
+      - go test ./...
+
+  lint:
+    desc: Run code linters
+    cmds:
+      - golangci-lint run
+
+  fmt:
+    desc: Format Go code
+    cmds:
+      - golangci-lint fmt
+
+  clean:
+    desc: Clean build artifacts
+    cmds:
+      - rm -rf {{.BUILD_DIR}}
+

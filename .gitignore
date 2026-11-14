@@ -32,3 +32,6 @@ go.work.sum
 
 # Build output
 build/
+
+# Task's cache
+.task/
