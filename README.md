@@ -73,7 +73,7 @@ assumes a 3-node deployment, similar to the one in the
 Start by building the FeCNI image.
 
 ```bash
-just image
+task image
 ```
 
 Take the resulting image tar ball from the `build/` directory and copy it to
@@ -113,11 +113,13 @@ running on each node in the cluster.
 
 ## For Developers
 
-Common development workflows are defined in the [`justfile`](./justfile). You
-can list all available recipes with:
+FeCNI uses `task` as its developer interface. See [Task's homepage][task]
+for more info about its installation and usage. Common development workflows are
+defined in the [`Taskfile`](./Taskfile.yml). You can list all available recipes
+with:
 
 ```bash
-just --list
+task --list
 ```
 
 ### Building
@@ -129,7 +131,7 @@ exporting `GOARCH` variable (see [supported GOARCH values][goarch]).
 To build just the FeCNI binaries, run:
 
 ```bash
-just build
+task build
 ```
 
 This produces two binaries in the `build/` folder:
@@ -140,23 +142,32 @@ This produces two binaries in the `build/` folder:
 To build the complete `OCI` image that can be imported into a registry, run:
 
 ```bash
-just image
+task image
 ```
 
 This produces a tarball image in the `build/` folder. The image contains both
 of the binaries mentioned above.
 
+> [!NOTE]
+> To build binaries or images for different architecture than the current
+> host, you can pass `GOARCH=<arch>` variable to the `build` and `image`
+> tasks. For example:
+>
+> ```bash
+> task image GOARCH=arm64
+> ```
 
 ### Testing
 
 To execute all available unit tests, run:
 
 ```bash
-just test
+task test
 ```
 
 <!-- Link references -->
 
 [goarch]: https://go.dev/doc/install/source#environment
-[pod-cidr]: https://kubernetes.io/docs/reference/kubernetes-api/core/node-v1/#NodeSpec
 [kubeadm]: https://kubernetes.io/docs/setup/production-environment/tools/kubeadm/create-cluster-kubeadm/
+[pod-cidr]: https://kubernetes.io/docs/reference/kubernetes-api/core/node-v1/#NodeSpec
+[task]: https://taskfile.dev/docs/
