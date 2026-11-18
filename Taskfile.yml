@@ -54,15 +54,36 @@ tasks:
       - docker buildx build --platform {{.GOOS}}/{{.GOARCH}} -t fecni:{{.VERSION}} --load .
       - docker save fecni:{{.VERSION}} -o {{.BUILD_DIR}}/fecni_{{.GOOS}}_{{.GOARCH}}_{{.VERSION}}.tar
 
-  test:
+  test:unit:
     desc: Run unit tests
     cmds:
       - go test ./...
 
+  test:e2e:
+    desc: Run e2e tests
+    summary: |
+      Run e2e tests
+
+      By default, this task will run every test suite found in the 'tests/'
+      directory. If you wish to run only a specific subset of tests, you can
+      pass paths to tests suites (and any other BATS options) as CLI arguments
+
+      Example:
+        $ task test:e2e -- tests/smoke.bats
+
+    deps:
+      - image
+    cmds:
+      - task: e2e:run
+
   lint:
     desc: Run code linters
+    silent: true
     cmds:
+      - echo "linting Go code"
       - golangci-lint run
+      - echo "linting e2e tests"
+      - task: e2e:lint
 
   fmt:
     desc: Format Go code
@@ -74,3 +95,7 @@ tasks:
     cmds:
       - rm -rf {{.BUILD_DIR}}
 
+includes:
+  e2e:
+    internal: true
+    taskfile: ./tests/Taskfile.yml
