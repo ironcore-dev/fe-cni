@@ -1,0 +1,70 @@
+# yaml-language-server: $schema=https://taskfile.dev/schema.json
+#
+# This file is not meant to be used directly. Public tasks are exposed
+# via the main Taskfile.yml in the root directory of the project.
+version: '3'
+
+vars:
+  DEPENDENCIES:
+    - docker
+    - git
+    - go
+    - grep
+    - ip
+    - kind
+    - kubectl
+    - openssl
+    - ping
+    - sudo
+    - uname
+
+env:
+  BATS_BIN: ./tests/.bats/core/bin/bats
+
+tasks:
+  run:
+    desc: Run e2e test suite
+    deps:
+      - init-submodules
+      - for: { var: DEPENDENCIES }
+        task: check-dep
+        vars: { DEP: "{{.ITEM}}" }
+    vars:
+      ARGS: '{{.CLI_ARGS | default "tests/"}}'
+    env:
+      FECNI_BUILD_DIR: '{{.BUILD_DIR}}'
+      FECNI_VERSION: '{{.VERSION}}'
+      FECNI_MANIFEST: './manifests/fecni.yaml'
+    cmds:
+      - $BATS_BIN {{.ARGS}}
+
+  lint:
+    desc: Run shellcheck linter on tests
+    deps:
+      - task: check-dep
+        vars: { DEP: "shellcheck" }
+    silent: true
+    cmds:
+      - |
+        find tests/ \
+          \( -path tests/.bats -prune \)  -o \
+          \( -name "*.bash" -o -name "*.bats" \) -print | xargs shellcheck && echo "Success."
+
+  check-dep:
+    internal: true
+    silent: true
+    cmds:
+      - |
+        if ! command -v {{.DEP}} >/dev/null 2>&1; then
+          echo "Missing dependency: {{.DEP}}" >&2
+          exit 1
+        fi
+
+  init-submodules:
+    internal: true
+    silent: true
+    cmds:
+      - cmd: |
+          echo "Initializing missing git submodules"
+          git submodule update --init --recursive
+        if: git submodule status | grep -qE "^-"

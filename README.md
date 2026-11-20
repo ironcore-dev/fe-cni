@@ -162,15 +162,32 @@ of the binaries mentioned above.
 
 ### Testing
 
-To execute all available unit tests, run:
+The project contains both unit test and end-to-end tests.:
+
+#### Unit Tests
+
+These are fast tests that rely only on `Go`. You can run them with:
 
 ```bash
-task test
+task test:unit
+```
+
+#### End-to-End Tests
+
+These tests are more complex and rely on [docker][docker] and [Kind][kind] to
+spin up a Kubernetes cluster for testing. They also require passwordless access
+to the `root` account and as such it's not recommended to run them on your
+primary machine. It's best to run them in a VM environment.
+
+```bash
+task test:e2e
 ```
 
 <!-- Link references -->
 
+[docker]: https://www.docker.com
 [goarch]: https://go.dev/doc/install/source#environment
+[kind]: https://kind.sigs.k8s.io
 [kubeadm]: https://kubernetes.io/docs/setup/production-environment/tools/kubeadm/create-cluster-kubeadm/
 [pod-cidr]: https://kubernetes.io/docs/reference/kubernetes-api/core/node-v1/#NodeSpec
 [task]: https://taskfile.dev/docs/
