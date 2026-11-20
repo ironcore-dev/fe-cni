@@ -1,0 +1,12 @@
+kind: Cluster
+apiVersion: kind.x-k8s.io/v1alpha4
+name: fecni-test
+nodes:
+  - role: control-plane
+  - role: worker
+  - role: worker
+networking:
+  disableDefaultCNI: true   # required so FeCNI is the only CNI
+  ipFamily: ipv6            # FeCNI is IPv6-only
+  podSubnet: "2001:db8::/48"
+  serviceSubnet: "2001:db8:1::/112"
