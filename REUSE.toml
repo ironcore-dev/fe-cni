@@ -14,8 +14,6 @@ path = [
     "Taskfile.yml",
     "VERSION",
     ".taskfiles/**",
-    "cmd/**",
-    "internal/**",
     "manifests/**"
 ]
 precedence = "aggregate"
