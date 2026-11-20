@@ -13,8 +13,7 @@ path = [
     "REUSE.toml",
     "Taskfile.yml",
     "VERSION",
-    "cmd/**",
-    "internal/**",
+    ".taskfiles/**",
     "manifests/**"
 ]
 precedence = "aggregate"

@@ -1,0 +1,27 @@
+# yaml-language-server: $schema=https://taskfile.dev/schema.json
+version: '3'
+
+env:
+  GOBIN: '{{.ROOT_DIR}}/{{.LOCAL_BIN}}'
+  ADDLICENSE_VERSION: v1.1.1
+
+tasks:
+  add:
+    desc: Add License header to files
+    deps:
+      - task: _install_addlicense
+    cmds:
+      - find . -name '*.go' -exec $GOBIN/addlicense -f hack/license-header.txt {} +
+
+  check:
+    desc: Check License headers in files
+    deps:
+      - task: _install_addlicense
+    cmds:
+      - find . -name '*.go' -exec  $GOBIN/addlicense -check -c 'IronCore authors' {} +
+
+  _install_addlicense:
+    internal: true
+    cmds:
+      - mkdir -p $GOBIN
+      - go install github.com/google/addlicense@$ADDLICENSE_VERSION

@@ -35,3 +35,6 @@ build/
 
 # Task's cache
 .task/
+
+# Directory for local executables
+bin/
