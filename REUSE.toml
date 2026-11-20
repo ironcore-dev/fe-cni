@@ -13,6 +13,7 @@ path = [
     "REUSE.toml",
     "Taskfile.yml",
     "VERSION",
+    ".taskfiles/**",
     "cmd/**",
     "internal/**",
     "manifests/**"

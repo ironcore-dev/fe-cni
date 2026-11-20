@@ -2,11 +2,12 @@
 version: '3'
 
 vars:
-  # FeCNI is a Linux CNI plugin — always target Linux.
-  GOOS: linux
+  BUILD_DIR: build
   GOARCH:
     sh: go env GOARCH
-  BUILD_DIR: build
+  # FeCNI is a Linux CNI plugin — always target Linux.
+  GOOS: linux
+  LOCAL_BIN: bin
   VERSION:
     sh: cat VERSION 2>/dev/null || echo dev
 
@@ -74,3 +75,6 @@ tasks:
     cmds:
       - rm -rf {{.BUILD_DIR}}
 
+includes:
+  license:
+    taskfile: .taskfiles/license.yml
